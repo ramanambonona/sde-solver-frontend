@@ -1,3 +1,14 @@
+// Configuration de l'URL de l'API
+const getApiBaseUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    } else {
+        return 'https://sde-solver-app.onrender.com'; // Votre backend Render
+    }
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 feather.replace();
 
 // Navigation
@@ -111,9 +122,10 @@ async function solveSDE() {
             parameters: parameters
         };
 
-        console.log('Sending request:', requestData);
+        console.log('Sending request to:', `${API_BASE_URL}/solve`);
+        console.log('Request data:', requestData);
 
-        const response = await fetch('http://localhost:8000/solve', {
+        const response = await fetch(`${API_BASE_URL}/solve`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -223,9 +235,10 @@ async function simulateSDE() {
             num_trajectories: numTrajectories
         };
 
-        console.log('Sending simulation request:', requestData);
+        console.log('Sending simulation request to:', `${API_BASE_URL}/simulate`);
+        console.log('Request data:', requestData);
 
-        const response = await fetch('http://localhost:8000/simulate', {
+        const response = await fetch(`${API_BASE_URL}/simulate`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -421,4 +434,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set active nav link
     document.querySelector('.nav-link[data-target="solver"]').classList.add('active-tab');
+    
+    // Log the API URL for debugging
+    console.log('API Base URL:', API_BASE_URL);
+    console.log('Frontend URL:', window.location.href);
 });
