@@ -52,18 +52,31 @@ function showSection(sectionId) {
     targetSection.classList.add('active');
 }
 
-// LaTeX equation formatting - Fix excessive $$
+// Improved LaTeX cleaning function
 function cleanLatex(content) {
     if (!content) return '';
     
-    return content
+    let cleaned = content;
+    
+    // Remove excessive $$ and ensure proper formatting
+    cleaned = cleaned
         .replace(/\$\s*\$/g, '') // Remove empty $$
-        .replace(/\\\[\\\]/g, '') // Remove empty \[]
-        .replace(/([a-zA-Z])([A-Z])/g, '$1 $2') // Add space between stuck words
+        .replace(/\\\[\s*\\\]/g, '') // Remove empty \[]
         .replace(/\$\s*\\\s*\$/g, '') // Remove $ around LaTeX commands
-        .replace(/\\\[/g, '\\[') // Normalize delimiters
-        .replace(/\\\]/g, '\\]')
+        .replace(/([a-zA-Z])([A-Z])/g, '$1 $2') // Add space between words
         .trim();
+    
+    // Remove surrounding $ if they exist
+    if (cleaned.startsWith('$') && cleaned.endsWith('$')) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
+    }
+    
+    // Remove surrounding \[ and \] if they exist
+    if (cleaned.startsWith('\\[') && cleaned.endsWith('\\]')) {
+        cleaned = cleaned.substring(2, cleaned.length - 2);
+    }
+    
+    return cleaned;
 }
 
 // Load example buttons
@@ -499,7 +512,6 @@ function addStep(number, title, content) {
         step.style.transform = 'translateY(0)';
     }, 100 * number);
 }
-
 function toggleStep(button) {
     const formulaBox = button.closest('.solution-step').querySelector('.formula-box');
     const isCollapsed = formulaBox.classList.contains('collapsed');
@@ -674,3 +686,4 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('API Base URL:', API_BASE_URL);
     console.log('Frontend URL:', window.location.href);
 });
+
