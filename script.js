@@ -162,8 +162,8 @@ async function solveSDE() {
             const stepElement = document.createElement('div');
             stepElement.className = 'solution-step bg-white p-6 rounded-lg shadow-md';
             stepElement.innerHTML = `
-                <h4 class="font-bold text-teal-700 mb-2">Step ${index + 1}: ${step.title}</h4>
-                <div class="formula-box">${step.content}$</div> 
+                <h4 class="font-bold text-teal-700 mb-2">Step {index + 1}: {step.title}</h4>
+                <div class="formula-box">{step.content}</div> 
             `;
             stepsContainer.appendChild(stepElement);
         });
@@ -171,7 +171,7 @@ async function solveSDE() {
         // Display final answer
         finalAnswer.innerHTML = `
             <h3 class="font-bold text-xl text-teal-700 mb-4">Final Solution</h3>
-            <div class="formula-box">$${data.final_solution}$$</div>
+            <div class="formula-box">{data.final_solution}</div>
         `;
         finalAnswer.classList.remove('hidden');
 
@@ -543,5 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('downloadPdfBtn').addEventListener('click', downloadPDF);
     document.getElementById('downloadLatexBtn').addEventListener('click', downloadLatex);
 });
+
 
 
