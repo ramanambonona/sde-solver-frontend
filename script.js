@@ -163,7 +163,7 @@ async function solveSDE() {
             stepElement.className = 'solution-step bg-white p-6 rounded-lg shadow-md';
             stepElement.innerHTML = `
                 <h4 class="font-bold text-teal-700 mb-2">Step ${index + 1}: ${step.title}</h4>
-                <div class="formula-box">$${step.content}$$</div>  // Wrapped for display math as per correction
+                <div class="formula-box">$${step.content}$$</div> 
             `;
             stepsContainer.appendChild(stepElement);
         });
@@ -543,3 +543,4 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('downloadPdfBtn').addEventListener('click', downloadPDF);
     document.getElementById('downloadLatexBtn').addEventListener('click', downloadLatex);
 });
+
