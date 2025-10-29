@@ -120,136 +120,10 @@ async function solveSDE() {
         const initialCondition = document.getElementById('initialCondition').value.trim();
         const timeVariable = document.getElementById('timeVariable').value.trim() || 't';
         const paramsText = document.getElementById('problemDescription').value.trim();
+        const processType = document.getElementById('processType').value;  // Added as per correction
 
         if (!drift || !diffusion) {
             throw new Error('Please enter both drift and diffusion coefficients');
-        }
-
-        let parameters = {};
-        if (paramsText) {
-            try {
-                parameters = JSON.parse(paramsText);
-            } catch (e) {
-                throw new Error('Invalid JSON in parameters field');
-            }
-        }
-
-        const requestData = {
-            equation_type: equationType,
-            drift: drift,
-            diffusion: diffusion,
-            initial_condition: initialCondition || undefined,
-            variables: {
-                [timeVariable]: 'variable',
-                'x': 'variable',
-                'W': 'variable'
-            },
-            parameters: parameters
-        };
-
-        console.log('Sending request to:', `${API_BASE_URL}/solve`);
-        console.log('Request data:', requestData);
-
-        const response = await fetch(`${API_BASE_URL}/solve`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Received response:', data);
-        
-        // Display solution steps
-        stepsContainer.innerHTML = '';
-        if (data.steps && Array.isArray(data.steps)) {
-            data.steps.forEach((step, idx) => {
-                if (step.title && step.content) {
-                    addStep(idx + 1, step.title, step.content);
-                }
-            });
-        }
-        
-        // Display final solution
-        if (data.final_solution) {
-            const cleanedSolution = cleanLatex(data.final_solution);
-            document.getElementById('finalFormula').innerHTML = `\\[ ${cleanedSolution} \\]`;
-            finalAnswer.classList.remove('hidden');
-        }
-
-        // Store data for download
-        window.currentSolutionData = {
-            steps: data.steps,
-            final_solution: data.final_solution,
-            equation_type: equationType,
-            drift: drift,
-            diffusion: diffusion,
-            parameters: parameters
-        };
-
-    } catch (error) {
-        console.error('Error:', error);
-        errorContainer.classList.remove('hidden');
-        errorContainer.innerHTML = `
-            <div class="error-message">
-                <h4 class="font-bold mb-2 flex items-center">
-                    <i data-feather="alert-triangle" class="w-4 h-4 mr-2"></i>
-                    Solving Error
-                </h4>
-                <p>${error.message}</p>
-                <p class="text-sm mt-2">Please check your equation syntax and try again.</p>
-            </div>
-        `;
-        feather.replace();
-    } finally {
-        btn.disabled = false;
-        thinkingDiv.classList.add('hidden');
-        feather.replace();
-        // Re-trigger MathJax rendering
-        if (typeof MathJax !== 'undefined') {
-            MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
-        }
-    }
-}
-
-// Simulate SDE function
-async function simulateSDE() {
-    const btn = document.getElementById('simulateBtn');
-    const thinkingDiv = document.getElementById('aiThinking');
-    const errorContainer = document.getElementById('errorContainer');
-    const simulationResult = document.getElementById('simulationResult');
-    const finalAnswer = document.getElementById('finalAnswer');
-
-    // Reset state
-    btn.disabled = true;
-    thinkingDiv.classList.remove('hidden');
-    errorContainer.classList.add('hidden');
-    simulationResult.classList.add('hidden');
-    finalAnswer.classList.add('hidden');
-
-    try {
-        const equationType = document.querySelector('input[name="equationType"]:checked').value;
-        const drift = document.getElementById('drift').value.trim();
-        const diffusion = document.getElementById('diffusion').value.trim();
-        const initialCondition = document.getElementById('initialCondition').value.trim();
-        const timeStart = parseFloat(document.getElementById('timeStart').value);
-        const timeEnd = parseFloat(document.getElementById('timeEnd').value);
-        const numTrajectories = parseInt(document.getElementById('numTrajectories').value);
-        const paramsText = document.getElementById('problemDescription').value.trim();
-        const processType = document.getElementById('processType').value;
-
-        if (!drift || !diffusion) {
-            throw new Error('Please enter both drift and diffusion coefficients');
-        }
-
-        if (timeStart >= timeEnd) {
-            throw new Error('Time end must be greater than time start');
         }
 
         let parameters = {};
@@ -267,339 +141,316 @@ async function simulateSDE() {
             diffusion: diffusion,
             initial_condition: initialCondition,
             parameters: parameters,
-            time_span: [timeStart, timeEnd],
-            num_points: 100,
-            num_trajectories: numTrajectories,
-            process_type: processType
+            process_type: processType  // Added as per correction
         };
 
-        console.log('Sending simulation request to:', `${API_BASE_URL}/simulate`);
-        console.log('Request data:', requestData);
-
-        const response = await fetch(`${API_BASE_URL}/simulate`, {
+        const response = await fetch(`${API_BASE_URL}/solve`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestData)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+            throw new Error(errorData.detail || 'Failed to solve SDE');
         }
 
         const data = await response.json();
-        console.log('Received simulation response:', data);
-        
-        // Display simulation plot using Plotly with pastel colors
-        displaySimulationPlot(data);
+
+        // Display steps
+        data.steps.forEach((step, index) => {
+            const stepElement = document.createElement('div');
+            stepElement.className = 'solution-step bg-white p-6 rounded-lg shadow-md';
+            stepElement.innerHTML = `
+                <h4 class="font-bold text-teal-700 mb-2">Step ${index + 1}: ${step.title}</h4>
+                <div class="formula-box">$${step.content}$$</div>  // Wrapped for display math as per correction
+            `;
+            stepsContainer.appendChild(stepElement);
+        });
+
+        // Display final answer
+        finalAnswer.innerHTML = `
+            <h3 class="font-bold text-xl text-teal-700 mb-4">Final Solution</h3>
+            <div class="formula-box">$${data.final_solution}$$</div>
+        `;
+        finalAnswer.classList.remove('hidden');
+
+        // Re-render MathJax
+        if (typeof MathJax !== 'undefined') {
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, stepsContainer]);
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub, finalAnswer]);
+        }
 
     } catch (error) {
-        console.error('Error:', error);
-        errorContainer.classList.remove('hidden');
         errorContainer.innerHTML = `
-            <div class="error-message">
-                <h4 class="font-bold mb-2 flex items-center">
-                    <i data-feather="alert-triangle" class="w-4 h-4 mr-2"></i>
-                    Simulation Error
-                </h4>
-                <p>${error.message}</p>
-                <p class="text-sm mt-2">Please check your parameters and try again.</p>
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <h4 class="font-bold text-red-700 mb-2">Solving Error</h4>
+                <p class="text-red-600">${error.message}</p>
+                <p class="text-red-500 text-sm mt-2">Please check your equation syntax and try again.</p>
             </div>
         `;
-        feather.replace();
+        errorContainer.classList.remove('hidden');
     } finally {
         btn.disabled = false;
         thinkingDiv.classList.add('hidden');
-        feather.replace();
     }
 }
 
-function displaySimulationPlot(data) {
-    const plotDiv = document.getElementById('simulationPlot');
+// Simulate SDE function
+async function simulateSDE() {
+    const btn = document.getElementById('simulateBtn');
+    const thinkingDiv = document.getElementById('simulationThinking');
     const simulationResult = document.getElementById('simulationResult');
-    
-    // Clear previous plot
-    plotDiv.innerHTML = '';
-    
-    // Create traces for each trajectory with pastel colors
-    const traces = [];
-    data.trajectories.forEach((trajectory, index) => {
-        const color = data.colors && data.colors[index] ? data.colors[index] : PASTEL_COLORS[index % PASTEL_COLORS.length];
-        traces.push({
-            x: data.time_points,
-            y: trajectory,
-            type: 'scatter',
-            mode: 'lines',
-            name: `Trajectory ${index + 1}`,
-            line: { color: color, width: 2 },
-            opacity: 0.8
-        });
-    });
-    
-    // Layout with Palatino font and custom styling
-    const layout = {
-        font: {
-            family: 'Palatino, serif',
-            size: 14,
-            color: 'black'
-        },
-        title: {
-            text: 'SDE Simulation',
-            font: { size: 18, family: 'Palatino, serif' }
-        },
-        xaxis: {
-            title: 'Time (t)',
-            showgrid: true,
-            gridcolor: 'lightgray',
-            gridwidth: 1,
-            zeroline: false
-        },
-        yaxis: {
-            title: 'X(t)',
-            showgrid: true,
-            gridcolor: 'lightgray',
-            gridwidth: 1,
-            zeroline: false
-        },
-        plot_bgcolor: 'white',
-        paper_bgcolor: 'white',
-        showlegend: true,
-        annotations: [{
-            x: 0.02,
-            y: 0.98,
-            xref: 'paper',
-            yref: 'paper',
-            text: 'SDE Solver by Ramanambonona Ambinintsoa, PhD',
-            showarrow: false,
-            font: { family: 'Palatino, serif', size: 12 },
-            bgcolor: 'white',
-            bordercolor: 'black',
-            borderwidth: 1,
-            borderpad: 4,
-            opacity: 0.8
-        }]
-    };
-    
-    // Create plot
-    Plotly.newPlot(plotDiv, traces, layout, {
-        responsive: true,
-        displayModeBar: true,
-        modeBarButtonsToAdd: ['drawline', 'drawopenpath', 'drawclosedpath', 'drawcircle', 'drawrect', 'eraseshape'],
-        displaylogo: false
-    });
-    
-    simulationResult.classList.remove('hidden');
-}
+    const errorContainer = document.getElementById('simulationError');
+    const plotContainer = document.getElementById('plotContainer');
+    const downloadPlotBtn = document.getElementById('downloadPlotBtn');
 
-function downloadPlot() {
-    const plotDiv = document.getElementById('simulationPlot');
-    Plotly.downloadImage(plotDiv, {
-        format: 'png',
-        filename: 'sde_simulation',
-        width: 1000,
-        height: 600
-    });
-}
-
-// Download results as PDF
-async function downloadPDF() {
-    if (!window.currentSolutionData) {
-        alert('No solution to download. Please solve an SDE first.');
-        return;
-    }
+    btn.disabled = true;
+    thinkingDiv.classList.remove('hidden');
+    simulationResult.classList.add('hidden');
+    errorContainer.classList.add('hidden');
+    plotContainer.innerHTML = '';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/download-pdf`, {
+        const equationType = document.querySelector('input[name="equationType"]:checked').value;
+        const drift = document.getElementById('drift').value.trim();
+        const diffusion = document.getElementById('diffusion').value.trim();
+        const initialCondition = document.getElementById('initialCondition').value.trim() || '0';
+        const paramsText = document.getElementById('problemDescription').value.trim();
+        const processType = document.getElementById('processType').value;
+        const timeStart = parseFloat(document.getElementById('timeStart').value) || 0;
+        const timeEnd = parseFloat(document.getElementById('timeEnd').value) || 1;
+        const numPoints = parseInt(document.getElementById('numPoints').value) || 100;
+        const numTrajectories = parseInt(document.getElementById('numTrajectories').value) || 5;
+
+        if (!drift || !diffusion) {
+            throw new Error('Please enter both drift and diffusion coefficients');
+        }
+
+        let parameters = {};
+        if (paramsText) {
+            parameters = JSON.parse(paramsText);
+        }
+
+        const requestData = {
+            equation_type: equationType,
+            drift: drift,
+            diffusion: diffusion,
+            initial_condition: initialCondition,
+            parameters: parameters,
+            time_span: [timeStart, timeEnd],
+            num_points: numPoints,
+            num_trajectories: numTrajectories,
+            process_type: processType
+        };
+
+        const response = await fetch(`${API_BASE_URL}/simulate`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(window.currentSolutionData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to simulate SDE');
+        }
+
+        const data = await response.json();
+
+        // Create Plotly chart
+        const traces = data.trajectories.map((traj, i) => ({
+            x: data.time_points,
+            y: traj,
+            mode: 'lines',
+            name: `Trajectory ${i+1}`,
+            line: { color: data.colors[i] }
+        }));
+
+        const layout = {
+            title: 'SDE Simulation Trajectories',
+            xaxis: { title: 'Time' },
+            yaxis: { title: 'X(t)' },
+            hovermode: 'closest',
+            legend: { orientation: 'h' },
+            margin: { t: 40, b: 40, l: 40, r: 40 }
+        };
+
+        Plotly.newPlot('plotContainer', traces, layout);
+
+        // Enable download
+        downloadPlotBtn.classList.remove('hidden');
+        downloadPlotBtn.onclick = () => {
+            Plotly.downloadImage('plotContainer', {
+                format: 'png',
+                width: 1200,
+                height: 600,
+                filename: 'sde_simulation'
+            });
+        };
+
+        simulationResult.classList.remove('hidden');
+
+    } catch (error) {
+        errorContainer.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <h4 class="font-bold text-red-700 mb-2">Simulation Error</h4>
+                <p class="text-red-600">${error.message}</p>
+            </div>
+        `;
+        errorContainer.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        thinkingDiv.classList.add('hidden');
+    }
+}
+
+// Function to get current solution data for export
+function getCurrentSolutionData() {
+    const equationType = document.querySelector('input[name="equationType"]:checked').value;
+    const drift = document.getElementById('drift').value.trim();
+    const diffusion = document.getElementById('diffusion').value.trim();
+    const paramsText = document.getElementById('problemDescription').value.trim();
+
+    const steps = Array.from(document.querySelectorAll('#solutionSteps .solution-step')).map(step => ({
+        title: step.querySelector('h4').textContent.replace(/Step \d+: /, ''),
+        content: step.querySelector('.formula-box').textContent
+    }));
+
+    const final_solution = document.querySelector('#finalAnswer .formula-box').textContent;
+
+    let parameters = {};
+    if (paramsText) {
+        parameters = JSON.parse(paramsText);
+    }
+
+    return {
+        equation_type: equationType,
+        drift: drift,
+        diffusion: diffusion,
+        parameters: parameters,
+        steps: steps,
+        final_solution: final_solution
+    };
+}
+
+// Download PDF
+async function downloadPDF() {
+    try {
+        const data = getCurrentSolutionData();
+        const response = await fetch(`${API_BASE_URL}/generate_pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         });
 
         if (!response.ok) {
             throw new Error('Failed to generate PDF');
         }
 
-        // Download PDF
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.style.display = 'none';
         a.href = url;
-        a.download = `sde_solution_${Date.now()}.pdf`;
+        a.download = 'sde_solution.pdf';
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error('PDF download error:', error);
-        alert('Error generating PDF: ' + error.message);
+        console.error('Error downloading PDF:', error);
+        // Show error message to user
     }
 }
 
-// Download results as LaTeX
-async function downloadLaTeX() {
-    if (!window.currentSolutionData) {
-        alert('No solution to download. Please solve an SDE first.');
-        return;
-    }
-
+// Download LaTeX
+async function downloadLatex() {
     try {
-        const response = await fetch(`${API_BASE_URL}/download-latex`, {
+        const data = getCurrentSolutionData();
+        const response = await fetch(`${API_BASE_URL}/generate_latex`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(window.currentSolutionData)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         });
 
         if (!response.ok) {
-            throw new Error('Failed to generate LaTeX file');
+            throw new Error('Failed to generate LaTeX');
         }
 
-        // Download LaTeX file
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.style.display = 'none';
         a.href = url;
-        a.download = `sde_solution_${Date.now()}.tex`;
+        a.download = 'sde_solution.tex';
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error('LaTeX download error:', error);
-        alert('Error generating LaTeX file: ' + error.message);
+        console.error('Error downloading LaTeX:', error);
+        // Show error message to user
     }
 }
 
-// Helper functions
-function addStep(number, title, content) {
-    const stepsContainer = document.getElementById('solutionSteps');
-    const step = document.createElement('div');
-    step.className = 'solution-step p-4 bg-white rounded-lg shadow-sm';
-    
-    // Clean LaTeX content
-    const cleanedContent = cleanLatex(content);
-    
-    step.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center">
-                <span class="bg-teal-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0">${number}</span>
-                <span class="font-semibold text-gray-800">${title}</span>
-            </div>
-            <button class="expand-btn" onclick="toggleStep(this)">
-                Expand
-            </button>
-        </div>
-        <div class="formula-box collapsed">
-            \\[ ${cleanedContent} \\]
-        </div>
-    `;
-    
-    stepsContainer.appendChild(step);
-    
-    // Animation
-    step.style.opacity = '0';
-    step.style.transform = 'translateY(20px)';
-    setTimeout(() => {
-        step.style.transition = 'all 0.4s ease';
-        step.style.opacity = '1';
-        step.style.transform = 'translateY(0)';
-    }, 100 * number);
-}
-function toggleStep(button) {
-    const formulaBox = button.closest('.solution-step').querySelector('.formula-box');
-    const isCollapsed = formulaBox.classList.contains('collapsed');
-    
-    formulaBox.classList.toggle('collapsed');
-    button.textContent = isCollapsed ? 'Collapse' : 'Expand';
-}
+// Handle expand buttons for formula boxes
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('expand-btn')) {
+        const box = e.target.closest('.formula-box');
+        box.classList.toggle('collapsed');
+        e.target.textContent = box.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+    }
+});
 
-function toggleAllBoxes() {
-    const toggleBtn = document.getElementById('toggleAllText');
-    const boxes = document.querySelectorAll('.formula-box');
-    const expandBtns = document.querySelectorAll('.expand-btn');
-    
-    const allExpanded = Array.from(boxes).every(box => !box.classList.contains('collapsed'));
-    
-    boxes.forEach(box => {
-        if (allExpanded) {
-            box.classList.add('collapsed');
-        } else {
-            box.classList.remove('collapsed');
+// Configure process selector
+function setupProcessSelector() {
+    const processTypeSelect = document.getElementById('processType');
+    processTypeSelect.addEventListener('change', function() {
+        const processType = this.value;
+        const defaultParams = {
+            'custom': '{}',
+            'geometric_brownian': '{"mu": 0.1, "sigma": 0.2, "S0": 100}',
+            'ornstein_uhlenbeck': '{"theta": 1.0, "mu": 0.0, "sigma": 0.5, "x0": 0}',
+            'vasicek': '{"a": 0.1, "b": 0.05, "sigma": 0.02, "r0": 0.05}',
+            'cir': '{"a": 0.1, "b": 0.05, "sigma": 0.1, "r0": 0.05}',
+            'brownian': '{}',
+            'exponential_martingale': '{"mu": 0, "sigma": 0.2}',
+            'poisson': '{"lambd": 1.0}',
+            'jump_diffusion': '{"mu": 0.1, "sigma": 0.2, "lambd": 0.5, "jump_mean": 0, "jump_std": 0.1, "S0": 100}'
+        };
+
+        const defaultDrift = {
+            'custom': 'mu*x',
+            'geometric_brownian': 'mu*x',
+            'ornstein_uhlenbeck': 'theta*(mu - x)',
+            'vasicek': 'a*(b - x)',
+            'cir': 'a*(b - x)',
+            'brownian': '0',
+            'exponential_martingale': '0',
+            'poisson': '0',
+            'jump_diffusion': 'mu*x'
+        };
+
+        const defaultDiffusion = {
+            'custom': 'sigma*x',
+            'geometric_brownian': 'sigma*x',
+            'ornstein_uhlenbeck': 'sigma',
+            'vasicek': 'sigma',
+            'cir': 'sigma*sqrt(x)',
+            'brownian': '1',
+            'exponential_martingale': 'sigma*x',
+            'poisson': '1',
+            'jump_diffusion': 'sigma*x'
+        };
+
+        if (defaultParams[processType]) {
+            document.getElementById('problemDescription').value = defaultParams[processType];
+        }
+        if (defaultDrift[processType]) {
+            document.getElementById('drift').value = defaultDrift[processType];
+        }
+        if (defaultDiffusion[processType]) {
+            document.getElementById('diffusion').value = defaultDiffusion[processType];
         }
     });
-    
-    expandBtns.forEach(btn => {
-        btn.textContent = allExpanded ? 'Expand' : 'Collapse';
-    });
-    
-    toggleBtn.textContent = allExpanded ? 'Expand All' : 'Collapse All';
-}
-
-// Process type selector configuration
-function setupProcessSelector() {
-    const processSelect = document.getElementById('processType');
-    
-    processSelect.addEventListener('change', function() {
-        const selectedProcess = this.value;
-        
-        // Update fields based on process type
-        updateProcessFields(selectedProcess);
-    });
-}
-
-function updateProcessFields(processType) {
-    const defaultParams = {
-        'custom': '{"mu": 0.1, "sigma": 0.2}',
-        'geometric_brownian': '{"mu": 0.1, "sigma": 0.2, "S0": 100}',
-        'ornstein_uhlenbeck': '{"theta": 1.0, "mu": 0.0, "sigma": 0.5, "x0": 0}',
-        'vasicek': '{"a": 0.1, "b": 0.05, "sigma": 0.02, "r0": 0.05}',
-        'cir': '{"a": 0.1, "b": 0.05, "sigma": 0.1, "r0": 0.05}',
-        'brownian': '{}',
-        'exponential_martingale': '{"mu": 0, "sigma": 0.2}',
-        'poisson': '{"lambd": 1.0}',
-        'jump_diffusion': '{"mu": 0.1, "sigma": 0.2, "lambd": 0.5, "jump_mean": 0, "jump_std": 0.1, "S0": 100}'
-    };
-
-    const defaultDrift = {
-        'custom': 'mu*x',
-        'geometric_brownian': 'mu*x',
-        'ornstein_uhlenbeck': 'theta*(mu - x)',
-        'vasicek': 'a*(b - x)',
-        'cir': 'a*(b - x)',
-        'brownian': '0',
-        'exponential_martingale': '0',
-        'poisson': '0',
-        'jump_diffusion': 'mu*x'
-    };
-
-    const defaultDiffusion = {
-        'custom': 'sigma*x',
-        'geometric_brownian': 'sigma*x',
-        'ornstein_uhlenbeck': 'sigma',
-        'vasicek': 'sigma',
-        'cir': 'sigma*sqrt(x)',
-        'brownian': '1',
-        'exponential_martingale': 'sigma*x',
-        'poisson': '1',
-        'jump_diffusion': 'sigma*x'
-    };
-
-    if (defaultParams[processType]) {
-        document.getElementById('problemDescription').value = defaultParams[processType];
-    }
-    if (defaultDrift[processType]) {
-        document.getElementById('drift').value = defaultDrift[processType];
-    }
-    if (defaultDiffusion[processType]) {
-        document.getElementById('diffusion').value = defaultDiffusion[processType];
-    }
 }
 
 // Load examples from API
@@ -685,5 +536,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Log the API URL for debugging
     console.log('API Base URL:', API_BASE_URL);
     console.log('Frontend URL:', window.location.href);
-});
 
+    // Attach event listeners for buttons
+    document.getElementById('solveBtn').addEventListener('click', solveSDE);
+    document.getElementById('simulateBtn').addEventListener('click', simulateSDE);
+    document.getElementById('downloadPdfBtn').addEventListener('click', downloadPDF);
+    document.getElementById('downloadLatexBtn').addEventListener('click', downloadLatex);
+});
