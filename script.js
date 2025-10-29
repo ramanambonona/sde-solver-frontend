@@ -64,7 +64,6 @@ function cleanLatex(content) {
         .replace(/\\\[\s*\\\]/g, '') // Remove empty \[]
         .replace(/\$\s*\\\s*\$/g, '') // Remove $ around LaTeX commands
         .replace(/([a-zA-Z])([A-Z])/g, '$1 $2') // Add space between words
-        .replace(/\$\$/g, '$') // Remove double $$
         .trim();
     
     // Remove surrounding $ if they exist
@@ -105,8 +104,6 @@ async function solveSDE() {
     const errorContainer = document.getElementById('errorContainer');
     const finalAnswer = document.getElementById('finalAnswer');
     const simulationResult = document.getElementById('simulationResult');
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    const downloadLatexBtn = document.getElementById('downloadLatexBtn');
 
     // Reset state
     btn.disabled = true;
@@ -115,8 +112,6 @@ async function solveSDE() {
     errorContainer.classList.add('hidden');
     finalAnswer.classList.add('hidden');
     simulationResult.classList.add('hidden');
-    downloadPdfBtn.classList.add('hidden');
-    downloadLatexBtn.classList.add('hidden');
 
     try {
         const equationType = document.querySelector('input[name="equationType"]:checked').value;
@@ -125,7 +120,7 @@ async function solveSDE() {
         const initialCondition = document.getElementById('initialCondition').value.trim();
         const timeVariable = document.getElementById('timeVariable').value.trim() || 't';
         const paramsText = document.getElementById('problemDescription').value.trim();
-        const processType = document.getElementById('processType').value;
+        const processType = document.getElementById('processType').value;  // Added as per correction
 
         if (!drift || !diffusion) {
             throw new Error('Please enter both drift and diffusion coefficients');
@@ -146,7 +141,7 @@ async function solveSDE() {
             diffusion: diffusion,
             initial_condition: initialCondition,
             parameters: parameters,
-            process_type: processType
+            process_type: processType  // Added as per correction
         };
 
         const response = await fetch(`${API_BASE_URL}/solve`, {
@@ -162,38 +157,23 @@ async function solveSDE() {
 
         const data = await response.json();
 
-        // Display steps with deduplication
-        const uniqueSteps = [];
-        const seenTitles = new Set();
-        data.steps.forEach(step => {
-            if (!seenTitles.has(step.title)) {
-                seenTitles.add(step.title);
-                uniqueSteps.push(step);
-            }
-        });
-
-        uniqueSteps.forEach((step, index) => {
-            const cleanedContent = cleanLatex(step.content);
+        // Display steps
+        data.steps.forEach((step, index) => {
             const stepElement = document.createElement('div');
             stepElement.className = 'solution-step bg-white p-6 rounded-lg shadow-md';
             stepElement.innerHTML = `
                 <h4 class="font-bold text-teal-700 mb-2">Step ${index + 1}: ${step.title}</h4>
-                <div class="formula-box">\\[${cleanedContent}\\]</div>
+                <div class="formula-box">$${step.content}$$</div>  // Wrapped for display math as per correction
             `;
             stepsContainer.appendChild(stepElement);
         });
 
         // Display final answer
-        const cleanedFinal = cleanLatex(data.final_solution);
         finalAnswer.innerHTML = `
             <h3 class="font-bold text-xl text-teal-700 mb-4">Final Solution</h3>
-            <div class="formula-box">\\[${cleanedFinal}\\]</div>
+            <div class="formula-box">$${data.final_solution}$$</div>
         `;
         finalAnswer.classList.remove('hidden');
-
-        // Show download buttons after successful solve
-        downloadPdfBtn.classList.remove('hidden');
-        downloadLatexBtn.classList.remove('hidden');
 
         // Re-render MathJax
         if (typeof MathJax !== 'undefined') {
@@ -230,7 +210,6 @@ async function simulateSDE() {
     simulationResult.classList.add('hidden');
     errorContainer.classList.add('hidden');
     plotContainer.innerHTML = '';
-    downloadPlotBtn.classList.add('hidden');
 
     try {
         const equationType = document.querySelector('input[name="equationType"]:checked').value;
